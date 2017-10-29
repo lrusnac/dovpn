@@ -46,10 +46,19 @@ func main() {
 	oauthClient := oauth2.NewClient(context.Background(), tokenSource)
 	client := godo.NewClient(oauthClient)
 
-	fmt.Printf("client: %v", client)
-
 	err := vpn.NewVpnInstance(client)
 	if err != nil {
 		fmt.Printf("error creating the vpn instance: %v\n", err)
+	}
+
+	dropletID, err := vpn.FindVpnInstance(client)
+	if err != nil {
+		fmt.Printf("error finding the vpn instance: %v\n", err)
+	}
+	fmt.Printf("found droplet: %d\n", dropletID)
+
+	err = vpn.DropVpnInstance(client)
+	if err != nil {
+		fmt.Printf("error destroying the vpn instance: %v\n", err)
 	}
 }
