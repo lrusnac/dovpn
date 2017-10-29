@@ -34,23 +34,74 @@ func NewVpnInstance(client *godo.Client) error {
 
 	ctx := context.TODO()
 
-	newDroplet, _, err := client.Droplets.Create(ctx, createRequest)
+	_, _, err := client.Droplets.Create(ctx, createRequest)
 
 	if err != nil {
 		fmt.Printf("Something bad happened: %s\n", err)
 		return err
 	}
 
-	fmt.Printf("the new vpn server is at: %v", newDroplet)
 	return nil
 }
 
-// ExistsVpnInstance returns true or false if there is a vpn instance
-func ExistsVpnInstance(client *godo.Client) (bool, error) {
-	return false, nil
+// FindVpnInstance returns the id of the vpn instance
+func FindVpnInstance(client *godo.Client) (int, error) {
+	droplets, err := dropletList(context.TODO(), client)
+	if err != nil {
+		fmt.Printf("Something happened while retrieving droplet list %s\n", err)
+	}
+
+	for _, d := range droplets {
+		if d.Name == "vpn" {
+			return d.ID, nil
+		}
+	}
+
+	return -1, nil
 }
 
 // DropVpnInstance destroys the vpn instance if exists
 func DropVpnInstance(client *godo.Client) error {
-	return nil
+	dropletID, err := FindVpnInstance(client)
+	if err != nil {
+		fmt.Printf("Something happened while retrieving the vpn droplet%s\n", err)
+	}
+
+	_, err = client.Droplets.Delete(context.TODO(), dropletID)
+
+	return err
+}
+
+func dropletList(ctx context.Context, client *godo.Client) ([]godo.Droplet, error) {
+	// create a list to hold our droplets
+	list := []godo.Droplet{}
+
+	// create options. initially, these will be blank
+	opt := &godo.ListOptions{}
+	for {
+		droplets, resp, err := client.Droplets.List(ctx, opt)
+		if err != nil {
+			return nil, err
+		}
+
+		// append the current page's droplets to our list
+		for _, d := range droplets {
+			list = append(list, d)
+		}
+
+		// if we are at the last page, break out the for loop
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			return nil, err
+		}
+
+		// set the page we want for the next request
+		opt.Page = page + 1
+	}
+
+	return list, nil
 }
