@@ -1,3 +1,3 @@
 # dovpn
 
-do not use for now, it's not complete
+do not use for now, it is not complete
